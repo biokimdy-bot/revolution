@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>진화 시뮬레이션</title>
+    <style>
+        body { background-color: #020617; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; box-sizing: border-box; }
+        
+        /* 튜토리얼 카드 스타일 */
+        .card { background: #0f172a; padding: 40px; border-radius: 16px; border: 1px solid #1e293b; max-width: 650px; width: 100%; text-align: center; box-sizing: border-box; }
+        .hidden { display: none !important; }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 25px 0; }
+        .factor-card { padding: 25px; background: #1e293b; border: 2px solid #334155; border-radius: 10px; cursor: pointer; color: #cbd5e1; font-weight: bold; font-size: 1.05rem; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .factor-card:hover { border-color: #3b82f6; background: #1e293b; }
+        .factor-card.done { opacity: 0.4; border-color: #10b981; color: #94a3b8; cursor: not-allowed; pointer-events: none; }
+
+        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #475569; background: #1e293b; color: white; box-sizing: border-box; }
+        
+        button { padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; transition: opacity 0.2s; font-size: 1rem; margin: 5px; }
+        button:hover { opacity: 0.9; }
+        
+        .btn-blue { background-color: #3b82f6; }
+        .btn-green { background-color: #10b981; margin-top: 15px; width: 100%; padding: 14px; font-size: 1.1rem; }
+        .btn-back { background-color: #475569; }
+
+        #text-display { font-size: 1.2rem; min-height: 80px; line-height: 1.6; margin-bottom: 20px; word-break: keep-all; }
+        .text-center { text-align: center; justify-content: center; display: flex; align-items: center; }
+        .text-left { text-align: left; }
+        
+        .rule-text { font-size: 0.95rem; color: #cbd5e1; text-align: left; line-height: 1.8; }
+        .rule-item { margin-bottom: 12px; padding-left: 1.2em; text-indent: -1.2em; }
+
+        .sim-box { width: 100%; height: 220px; background: #1e293b; border-radius: 10px; border: 2px solid #334155; margin: 20px 0; overflow: hidden; position: relative; }
+
+        /* 메인 시뮬레이션 스타일 */
+        #lab-screen { display: none; width: 100%; max-width: 1200px; }
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1e293b; padding-bottom: 15px; margin-bottom: 20px; }
+        .container { display: flex; flex-wrap: wrap; gap: 25px; width: 100%; }
+        .canvas-area { flex: 2 1 600px; display: flex; flex-direction: column; gap: 15px; min-width: 300px; }
+        #evolutionCanvas { border: 4px solid #1e293b; border-radius: 16px; background-color: #475569; width: 100%; height: auto; aspect-ratio: 650 / 450; transition: background-color 0.5s ease; }
+        .sidebar { flex: 1 1 280px; background: #0f172a; padding: 25px; border-radius: 16px; border: 1px solid #1e293b; height: fit-content; }
+        .action-list { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
+        .sidebar h3 { margin-top: 0; color: #94a3b8; border-bottom: 1px solid #1e293b; padding-bottom: 10px; text-align: left; }
+        #status-alert { background: #1e293b; padding: 12px; border-radius: 8px; font-weight: bold; color: #f59e0b; border-left: 5px solid #f59e0b; text-align: center; }
+        
+        .btn-selection { background-color: #ef4444; } 
+        .btn-mutation { background-color: #a855f7; }  
+        .btn-bottleneck { background-color: #f97316; } 
+        .btn-founder { background-color: #06b6d4; }    
+        .btn-flow { background-color: #22c55e; } 
+        .btn-speed { background-color: #64748b; margin-top: 5px; }
+
+        .desc-box { margin-top: 20px; padding: 15px; background: #1e293b; border-radius: 10px; border: 1px solid #334155; font-size: 0.85rem; line-height: 1.5; color: #cbd5e1; text-align: left; }
+        .desc-box b { color: #3b82f6; display: block; margin-bottom: 4px; }
+        .desc-box ul { margin: 5px 0 0 0; padding-left: 18px; }
+        .desc-box li { margin-bottom: 6px; }
+    </style>
+</head>
+<body>
+
+    <div id="main-card" class="card">
+        <div style="font-size: 0.85rem; color: #cbd5e1; text-align: left; margin-bottom: 15px; font-weight: normal;">by BIOKIM:D</div>
+        <h2 id="card-title">진화 탐구실</h2>
+        <div id="text-display"></div>
+        <div id="action-area"></div>
+    </div>
+
+    <div id="lab-screen">
+        <div style="font-size: 0.85rem; color: #cbd5e1; text-align: left; margin-bottom: 5px; font-weight: normal;">by BIOKIM:D</div>
+        <header>
+            <div><h1 id="display-world-name" style="margin:0;">🌍 생태계</h1></div>
+            <div style="text-align: right;"><h2 id="display-generation" style="margin:0; color:#f59e0b;">1 세대</h2><p id="display-population" style="font-weight:bold; margin: 5px 0 0 0;">인구수: 0 마리</p></div>
+        </header>
+        <div class="container">
+            <div class="canvas-area">
+                <div id="status-alert">🚀 튜토리얼: 진화 요인 발생 버튼을 눌러보세요!</div>
+                <canvas id="evolutionCanvas" width="650" height="450"></canvas>
+            </div>
+            <div class="sidebar">
+                <h3>⚡ 진화 요인 발생</h3>
+                <div class="action-list">
+                    <button class="btn-selection" id="selection-btn" onclick="applyNaturalSelection()">💥 자연선택 압박</button>
+                    <button class="btn-mutation" id="mutation-btn" onclick="triggerMutationExplosion()">🧬 돌연변이 대폭발</button>
+                    <button class="btn-bottleneck" onclick="triggerBottleneck()">🌋 대재앙 (병목효과)</button>
+                    <button class="btn-founder" id="founder-btn" onclick="triggerFounderEffect()">⛰️ 지리적 장벽 발생 (2/2)</button>
+                    <button class="btn-flow" id="flow-btn" onclick="triggerGeneFlow()">🌊 유전자 흐름</button>
+                    <button class="btn-speed" id="speed-btn" onclick="toggleSpeed()">⏳ 세대 시간 간격: 3초</button>
+                </div>
+                <div class="desc-box">
+                    <b>💡 진화 요인 가이드</b>
+                    <ul>
+                        <li><span style="color:#ef4444; font-weight:bold;">자연선택:</span> 비보호색 종족의 절반을 도태시킵니다.</li>
+                        <li><span style="color:#a855f7; font-weight:bold;">돌연변이:</span> 변이 태어날 확률이 50%로 증가합니다.</li>
+                        <li><span style="color:#f97316; font-weight:bold;">대재앙:</span> 단 5마리만 남기고 전멸시킵니다.</li>
+                        <li><span style="color:#06b6d4; font-weight:bold;">지리적 장벽:</span> 격리 진화를 유도합니다.</li>
+                        <li><span style="color:#22c55e; font-weight:bold;">유전자 흐름:</span> 유전자가 섞입니다.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const title = document.getElementById('card-title');
+        const display = document.getElementById('text-display');
+        const actionArea = document.getElementById('action-area');
+        let userName = "";
+        let learnedFactors = new Set();
+        let animId = null;
+
+        function initStartScreen() {
+            if(animId) { cancelAnimationFrame(animId); animId = null; }
+            title.innerText = "진화 시뮬레이션";
+            display.className = ""; display.innerHTML = "";
+            actionArea.innerHTML = `
+                <input type="text" id="user-name" placeholder="이름을 입력하세요" value="${userName}">
+                <button class="btn-blue" onclick="startFlow()">시작하기</button>
+            `;
+        }
+        initStartScreen();
+
+        function typeText(text, callback) {
+            display.innerHTML = "";
+            let i = 0;
+            function typing() {
+                if (i < text.length) {
+                    display.innerHTML += text.charAt(i);
+                    i++;
+                    setTimeout(typing, 30);
+                } else if (callback) callback();
+            }
+            typing();
+        }
+
+        function startFlow() {
+            const inputEl = document.getElementById('user-name');
+            if (!inputEl.value.trim()) { alert("이름을 입력해주세요."); return; }
+            userName = inputEl.value.trim();
+            title.innerText = "진화란 무엇인가";
+            display.className = "text-center";
+            actionArea.innerHTML = "";
+            typeText("진화란 한 개체군의 유전적 구성이 변하는 현상이다.", () => {
+                actionArea.innerHTML = `<button class="btn-back" onclick="initStartScreen()">뒤로가기</button><button class="btn-blue" onclick="showRules()">확인</button>`;
+            });
+        }
+
+        function showRules() {
+            title.innerText = "생태계 규칙";
+            display.className = "text-left";
+            display.innerHTML = `<div class="rule-text"><div class="rule-item">• 동그라미는 단세포 생물 한 개체를 의미하고, 3~7초마다 분열하며 대를 이어갑니다.</div><div class="rule-item">• 분열 시 1% 확률로 우연히 다른 색의 '돌연변이'가 태어나 반짝입니다.</div><div class="rule-item">• 우측의 '진화 요인 발생' 버튼을 눌러 생태계를 변화시키면 생물들이 적응하거나 살아남기 어려워질 수 있습니다.</div></div>`;
+            actionArea.innerHTML = `<button class="btn-back" onclick="startFlow()">뒤로가기</button><button class="btn-blue" onclick="showFactorSelection()">튜토리얼 시작하기</button>`;
+        }
+
+        function showFactorSelection() {
+            if(animId) { cancelAnimationFrame(animId); animId = null; }
+            title.innerText = "진화를 일으키는 요인에 대해서 배워봅시다.";
+            display.className = "text-left";
+            display.innerHTML = `<div class="grid">
+                <div class="factor-card ${learnedFactors.has('돌연변이') ? 'done' : ''}" onclick="openDetail('돌연변이')">🧬 돌연변이 ${learnedFactors.has('돌연변이') ? '✅' : ''}</div>
+                <div class="factor-card ${learnedFactors.has('자연선택') ? 'done' : ''}" onclick="openDetail('자연선택')">💥 자연선택 ${learnedFactors.has('자연선택') ? '✅' : ''}</div>
+                <div class="factor-card ${learnedFactors.has('유전적 부동') ? 'done' : ''}" onclick="openDetail('유전적 부동')">🌋 유전적 부동 ${learnedFactors.has('유전적 부동') ? '✅' : ''}</div>
+                <div class="factor-card ${learnedFactors.has('유전자 흐름') ? 'done' : ''}" onclick="openDetail('유전자 흐름')">🌊 유전자 흐름 ${learnedFactors.has('유전자 흐름') ? '✅' : ''}</div>
+            </div>`;
+            let btnHtml = `<button class="btn-back" onclick="showRules()">뒤로가기</button>`;
+            if (learnedFactors.size === 4) btnHtml += `<br><button class="btn-green" onclick="startSimulation()">🟢 생태계 만들기</button>`;
+            actionArea.innerHTML = btnHtml;
+        }
+
+        function openDetail(factor) {
+            learnedFactors.add(factor); title.innerText = factor;
+            actionArea.innerHTML = `<button class="btn-back" onclick="showFactorSelection()">뒤로가기</button>`;
+            if (factor === '돌연변이') {
+                display.innerHTML = `<p class="rule-text" style="font-size:1rem; margin-bottom:15px;">방사선, 화학 물질, 바이러스 등의 요인으로 DNA에 변화가 생기는 것이다.</p><div class="sim-box"><canvas id="simCanvas" width="570" height="220"></canvas></div>`;
+                runMutationSim();
+            } else if (factor === '자연선택') {
+                display.innerHTML = `<p class="rule-text" style="font-size:1rem; margin-bottom:15px;">생존에 유리한 형질을 가진 개체는 그렇지 않은 개체보다 많이 살아남아, 이 형질을 결정하는 대립유전자를 더 많이 남기게 된다.</p><div class="sim-box"><canvas id="simCanvas" width="570" height="220"></canvas></div>`;
+                runNaturalSelectionSim();
+            } else if (factor === '유전적 부동') {
+                display.innerHTML = `<p class="rule-text" style="font-size:1rem; margin-bottom:15px;">우연한 사건으로 개체군의 유전적 구성이 변하는 현상이다. 아래 두 가지 주요 효과가 존재한다.</p><div style="display:flex; gap:10px; margin-bottom:15px;"><button class="btn-blue" style="flex:1; margin:0;" onclick="runFounderEffectSim()">창시자 효과 보기</button><button class="btn-blue" style="flex:1; margin:0;" onclick="runBottleneckEffectSim()">병목 효과 보기</button></div><div id="drift-sim-box" class="sim-box hidden"><canvas id="simCanvas" width="570" height="220"></canvas></div>`;
+            } else if (factor === '유전자 흐름') {
+                display.innerHTML = `<p class="rule-text" style="font-size:1rem; margin-bottom:15px;">두 개체군 사이에서 개체가 이동하여 개체군의 유전적 구성이 달라지는 현상이다.</p><div class="sim-box"><canvas id="simCanvas" width="570" height="220"></canvas></div>`;
+                runGeneFlowSim();
+            }
+        }
+
+        function initCanvas() { const canvas = document.getElementById('simCanvas'); if(!canvas) return null; return { canvas, ctx: canvas.getContext('2d') }; }
+
+        // 돌연변이 시뮬레이션: 2차 분열 세로 방향
+        function runMutationSim() {
+            const cvs = initCanvas(); if(!cvs) return; const { canvas, ctx } = cvs;
+            let timer = 0; let pool = [{ x: 285, y: 110, tx: 285, ty: 110, c: '#3b82f6', mut: false }];
+            function splitPool(currentPool, mode) {
+                let next = [];
+                currentPool.forEach((p, i) => {
+                    if(mode === 'h') { // 1차 가로 분열
+                        next.push({ x: p.x, y: p.y, tx: p.tx - 40, ty: p.ty, c: p.c, mut: false });
+                        next.push({ x: p.x, y: p.y, tx: p.tx + 40, ty: p.ty, c: p.c, mut: false });
+                    } else if(mode === 'v') { // 2차 세로 분열
+                        next.push({ x: p.x, y: p.y, tx: p.tx, ty: p.ty - 40, c: p.c, mut: false });
+                        next.push({ x: p.x, y: p.y, tx: p.tx, ty: p.ty + 40, c: p.c, mut: false });
+                    } else { // 3차 혼합 및 변이
+                        let off = (i % 2 === 0) ? -25 : 25;
+                        let isMut = (i === 0);
+                        next.push({ x: p.x, y: p.y, tx: p.tx + off, ty: p.ty + 15, c: isMut ? '#ef4444' : p.c, mut: isMut });
+                        next.push({ x: p.x, y: p.y, tx: p.tx - off, ty: p.ty - 15, c: p.c, mut: false });
+                    }
+                });
+                return next;
+            }
+            function animate() {
+                timer++; ctx.fillStyle = '#1e293b'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                pool.forEach(p => {
+                    p.x += (p.tx - p.x) * 0.1; p.y += (p.ty - p.y) * 0.1;
+                    ctx.beginPath(); ctx.arc(p.x, p.y, 10, 0, Math.PI*2); ctx.fillStyle = p.c; ctx.fill();
+                    if(p.mut) {
+                        ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+                        ctx.fillStyle = '#ffffff'; ctx.font = 'bold 12px sans-serif'; ctx.fillText("✨ 돌연변이 발생!", p.x - 30, p.y - 18);
+                    }
+                });
+                if(timer === 60) pool = splitPool(pool, 'h');
+                if(timer === 140) pool = splitPool(pool, 'v');
+                if(timer === 220) pool = splitPool(pool, 'm');
+                if(timer === 380) { timer = 0; pool = [{ x: 285, y: 110, tx: 285, ty: 110, c: '#3b82f6', mut: false }]; }
+                animId = requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        function runNaturalSelectionSim() {
+            const cvs = initCanvas(); if(!cvs) return; const { canvas, ctx } = cvs;
+            let timer = 0, stage = 0; let pool = [];
+            ['#ef4444', '#3b82f6', '#f59e0b', '#a855f7'].forEach(c => { for(let i=0; i<5; i++) pool.push({ c: c, x: Math.random()*500+35, y: Math.random()*140+40, alive: true }); });
+            function animate() {
+                timer++; let bg = (stage % 2 === 1 && stage < 6) ? '#ef4444' : '#1e293b';
+                ctx.fillStyle = bg; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                pool.forEach(p => { if(!p.alive) return; ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, Math.PI*2); ctx.fillStyle = p.c; ctx.fill(); ctx.strokeStyle='#fff'; ctx.stroke(); });
+                ctx.fillStyle = "#ffffff"; ctx.font = "bold 14px sans-serif";
+                if(stage === 0) { ctx.fillText("다양한 색의 개체군 존재", 20, 30); if(timer > 80) { stage=1; timer=0; } }
+                else if(stage === 1 || stage === 3 || stage === 5) {
+                    ctx.fillText(`⚠️ 빨간색 환경 압박 (${(stage+1)/2}/3)`, 20, 30);
+                    if(timer > 45) { let nonReds = pool.filter(p => p.c !== '#ef4444' && p.alive); for(let i=0; i<Math.ceil(nonReds.length/1.8); i++) nonReds[i].alive = false; stage++; timer=0; }
+                } else if(stage === 2 || stage === 4) { ctx.fillText("비보호색 개체 감소 중...", 20, 30); if(timer > 45) { stage++; timer=0; } }
+                else if(stage === 6) { ctx.fillText("결과: 환경에 적응한 빨간색만 살아남음", 20, 30); if(timer > 150) { stage=0; timer=0; pool.forEach(p => p.alive = true); } }
+                animId = requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        // 창시자 효과 시뮬레이션
+        function runFounderEffectSim() {
+            if(animId) cancelAnimationFrame(animId); document.getElementById('drift-sim-box').classList.remove('hidden');
+            const cvs = initCanvas(); if(!cvs) return; const { canvas, ctx } = cvs;
+            let timer = 0; let pool = [];
+            ['#ef4444', '#3b82f6', '#f59e0b', '#a855f7'].forEach(c => { for(let i=0; i<5; i++) pool.push({ c:c, x: Math.random()*200+30, y: Math.random()*150+35, tx: null, ty: null }); });
+            function animate() {
+                timer++; ctx.fillStyle = '#1e293b'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.strokeStyle = '#475569'; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.moveTo(285, 0); ctx.lineTo(285, canvas.height); ctx.stroke(); ctx.setLineDash([]);
+                pool.forEach(p => { if(p.tx) { p.x += (p.tx - p.x) * 0.05; p.y += (p.ty - p.y) * 0.05; } ctx.beginPath(); ctx.arc(p.x, p.y, 7, 0, Math.PI*2); ctx.fillStyle = p.c; ctx.fill(); });
+                ctx.fillStyle = "#ffffff"; ctx.font = "bold 13px sans-serif"; ctx.fillText("원래 집단", 30, 25); ctx.fillText("새 격리지", 320, 25);
+                if(timer === 60) { pool.filter(p => p.c === '#ef4444').slice(0, 4).forEach((r, i) => { r.tx = 350 + (i*40); r.ty = 110 + (Math.sin(i)*30); }); }
+                if(timer > 110) { ctx.fillStyle = '#ef4444'; ctx.fillText("우연히 빨간색 위주 이주!", 310, 185); }
+                if(timer > 160) { ctx.fillStyle = '#10b981'; ctx.fillText("개체군의 유전적 구성이 변함!", 310, 205); }
+                if(timer > 300) { timer = 0; runFounderEffectSim(); return; } animId = requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        // 병목 효과 시뮬레이션
+        function runBottleneckEffectSim() {
+            if(animId) cancelAnimationFrame(animId); document.getElementById('drift-sim-box').classList.remove('hidden');
+            const cvs = initCanvas(); if(!cvs) return; const { canvas, ctx } = cvs;
+            let timer = 0, phase = 0; let pool = [];
+            ['#ef4444', '#3b82f6', '#f59e0b', '#a855f7'].forEach(c => { for(let i=0; i<5; i++) pool.push({ c:c, x: Math.random()*500+35, y: Math.random()*140+40, alive: true }); });
+            function animate() {
+                timer++; ctx.fillStyle = '#1e293b'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                if (phase === 1) { ctx.fillStyle = 'rgba(249, 115, 22, 0.3)'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+                pool.forEach(p => { if(!p.alive) return; ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, Math.PI*2); ctx.fillStyle = p.c; ctx.fill(); });
+                ctx.fillStyle = "#ffffff"; ctx.font = "bold 13px sans-serif";
+                if(phase === 0) { ctx.fillText("자연재해 발생 전", 20, 30); if(timer > 70) { phase = 1; timer = 0; } }
+                else if(phase === 1) { ctx.fillText("🌋 자연재해 발생!", 20, 30); if(timer > 30) { let yc = 0; pool.forEach(p => { if(p.c === '#f59e0b' && yc < 3) yc++; else p.alive = false; }); phase = 2; timer = 0; } }
+                else if(phase === 2) { 
+                    ctx.fillStyle = '#ef4444'; ctx.fillText("우연히 노란색 소수만 생존!", 20, 30); 
+                    if(timer > 50) { ctx.fillStyle = '#10b981'; ctx.fillText("개체군의 유전적 구성이 변함!", 20, 55); }
+                    if(timer > 200) { phase = 0; timer = 0; pool.forEach(p => p.alive = true); } 
+                }
+                animId = requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        // 유전자 흐름 2개 이동
+        function runGeneFlowSim() {
+            const cvs = initCanvas(); if(!cvs) return; const { canvas, ctx } = cvs;
+            let timer = 0; let lP = [], rP = [];
+            ['#ef4444', '#3b82f6', '#f59e0b', '#a855f7'].forEach(c => { for(let i=0; i<4; i++) lP.push({ c: c, x: Math.random()*180+20, y: Math.random()*140+40 }); });
+            for(let i=0; i<10; i++) rP.push({ c: '#ef4444', x: Math.random()*180+370, y: Math.random()*140+40 });
+            let migs = [{ c: '#3b82f6', x: 130, y: 80, mv: false }, { c: '#3b82f6', x: 170, y: 130, mv: false }];
+            lP.push(...migs);
+            function animate() {
+                timer++; ctx.fillStyle = '#1e293b'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.strokeStyle = '#475569'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(285, 0); ctx.lineTo(285, canvas.height); ctx.stroke();
+                lP.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 7, 0, Math.PI*2); ctx.fillStyle=p.c; ctx.fill(); });
+                rP.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 7, 0, Math.PI*2); ctx.fillStyle=p.c; ctx.fill(); });
+                ctx.fillStyle = "#ffffff"; ctx.font = "bold 13px sans-serif"; ctx.fillText("집단 A", 30, 25); ctx.fillText("집단 B", 410, 25);
+                if(timer === 65) migs.forEach(m => m.mv = true);
+                if(migs[0].mv) migs.forEach((m, idx) => { m.x += (420 - m.x) * 0.04; m.y += (100 + idx*40 - m.y) * 0.04; });
+                if(timer > 120) { ctx.fillStyle = '#3b82f6'; ctx.fillText("🌊 파란색 유전자 유입!", 250, 205); }
+                if(timer > 280) { timer = 0; migs[0].x = 130; migs[0].y = 80; migs[1].x = 170; migs[1].y = 130; migs.forEach(m => m.mv = false); }
+                animId = requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        function startSimulation() { if(animId) cancelAnimationFrame(animId); document.getElementById('main-card').classList.add('hidden'); document.getElementById('lab-screen').style.display = 'block'; document.getElementById('display-world-name').innerText = `🌍 ${userName}의 생태계`; startLab(); }
+
+        // 메인 랩 엔진
+        const ORIGINAL_COLOR = '#3b82f6'; const MUTANT_COLORS = ['#10b981', '#ef4444', '#f59e0b', '#a855f7'];
+        const ALL_BIOME_COLORS = [ORIGINAL_COLOR, '#10b981', '#ef4444', '#f59e0b', '#a855f7'];
+        // 초기 세대를 1로 변경
+        let population = [], generation = 1, mutationRate = 0.01, isLabRunning = false, genIntervalTime = 3000, genIntervalId = null, pulseTime = 0, isMutationExplosionTriggered = false, barrierCount = 0, isVerticalDivided = false, isHorizontalRightDivided = false, isBarrierOpenedTemporarily = false, currentCanvasBg = '#475569', predatorFlashAlpha = 0, selectionActiveTurns = 0, currentSelectionColor = '';
+        const mainCanvas = document.getElementById('evolutionCanvas'), mainCtx = mainCanvas.getContext('2d'), statusAlert = document.getElementById('status-alert');
+        const dividerX = 325, dividerY = 225;
+
+        function startLab() { population = [{ x: mainCanvas.width/2-50, y: mainCanvas.height/2, vx: 2, vy: 0, color: ORIGINAL_COLOR, isMutant: false, age: 0 }]; isLabRunning = true; mainLoop(); startGenerationTick(); }
+        function startGenerationTick() { if(genIntervalId) clearInterval(genIntervalId); genIntervalId = setInterval(nextGeneration, genIntervalTime); }
+        function mainLoop() {
+            if(!isLabRunning) return; mainCtx.clearRect(0,0, mainCanvas.width, mainCanvas.height); pulseTime+=0.1;
+            if(isVerticalDivided && !isBarrierOpenedTemporarily) { mainCtx.strokeStyle="#000"; mainCtx.lineWidth=12; mainCtx.beginPath(); mainCtx.moveTo(dividerX,0); mainCtx.lineTo(dividerX, mainCanvas.height); mainCtx.stroke(); }
+            if(isHorizontalRightDivided && !isBarrierOpenedTemporarily) { mainCtx.strokeStyle="#000"; mainCtx.lineWidth=12; mainCtx.beginPath(); mainCtx.moveTo(dividerX, dividerY); mainCtx.lineTo(mainCanvas.width, dividerY); mainCtx.stroke(); }
+            population.forEach(b => {
+                b.x+=b.vx; b.y+=b.vy; if(b.y<10 || b.y>mainCanvas.height-10) b.vy*=-1;
+                if(isVerticalDivided && !isBarrierOpenedTemporarily) {
+                    if(b.x-b.vx < dividerX) { if(b.x > dividerX-16) { b.x = dividerX-16; b.vx *= -1; } if(b.x < 10) { b.x = 10; b.vx *= -1; } }
+                    else { if(b.x < dividerX+16) { b.x = dividerX+16; b.vx *= -1; } if(b.x > mainCanvas.width-10) { b.x = mainCanvas.width-10; b.vx *= -1; }
+                        if(isHorizontalRightDivided) { if(b.y-b.vy < dividerY) { if(b.y > dividerY-16) { b.y = dividerY-16; b.vy *= -1; } } else { if(b.y < dividerY+16) { b.y = dividerY+16; b.vy *= -1; } } }
+                    }
+                } else { if(b.x<10 || b.x>mainCanvas.width-10) b.vx*=-1; }
+                mainCtx.beginPath(); mainCtx.arc(b.x, b.y, 9, 0, Math.PI*2); mainCtx.fillStyle=b.color; mainCtx.fill();
+                if(b.isMutant) { mainCtx.strokeStyle=`rgba(255,255,255,${0.4+Math.sin(pulseTime*2)*0.4})`; mainCtx.stroke(); }
+            });
+            if (predatorFlashAlpha > 0) { mainCtx.fillStyle=`rgba(239, 68, 68, ${predatorFlashAlpha})`; mainCtx.fillRect(0,0, mainCanvas.width, mainCanvas.height); predatorFlashAlpha-=0.04; }
+            requestAnimationFrame(mainLoop);
+        }
+        function nextGeneration() {
+            generation++; document.getElementById('display-generation').innerText = `${generation} 세대`;
+            if (selectionActiveTurns > 0) { selectionActiveTurns--; let match = population.filter(b => b.color.toLowerCase() === currentSelectionColor.toLowerCase()), nonMatch = population.filter(b => b.color.toLowerCase() !== currentSelectionColor.toLowerCase()); if(nonMatch.length > 0) nonMatch = nonMatch.sort(() => 0.5-Math.random()).slice(0, Math.floor(nonMatch.length/2)); population = [...match, ...nonMatch];
+                if (selectionActiveTurns === 0) { mainCanvas.style.backgroundColor='#475569'; document.getElementById('selection-btn').disabled=false; document.getElementById('selection-btn').innerText="💥 자연선택 압박"; statusAlert.innerText="🍃 환경이 안정되었습니다."; statusAlert.style.color="#10b981"; }
+                else { statusAlert.innerText=`비보호색 종은 포식자에게 먹혀 개체수가 절반으로 줄어듭니다. (남은 시간: ${selectionActiveTurns}세대)`; statusAlert.style.color="#ef4444"; }
+            }
+            let nextGen = []; population.forEach(p => { p.age++; if(p.age>5) return; let isMut = Math.random() < (isMutationExplosionTriggered ? 0.5 : mutationRate), c = isMut ? MUTANT_COLORS[Math.floor(Math.random()*MUTANT_COLORS.length)] : p.color;
+                let ang = Math.atan2(p.vy, p.vx), spd = Math.sqrt(p.vx*p.vx+p.vy*p.vy)||2, off = 15*Math.PI/180;
+                nextGen.push({x:p.x, y:p.y, vx:Math.cos(ang-off)*spd, vy:Math.sin(ang-off)*spd, color:p.color, isMutant:false, age:p.age}, {x:p.x, y:p.y, vx:Math.cos(ang+off)*spd, vy:Math.sin(ang+off)*spd, color:c, isMutant:isMut, age:0});
+            });
+            if(isVerticalDivided && !isBarrierOpenedTemporarily) {
+                let L = nextGen.filter(b=>b.x<dividerX), R = nextGen.filter(b=>b.x>=dividerX);
+                if(isHorizontalRightDivided) { let RT = R.filter(b=>b.y<dividerY), RB = R.filter(b=>b.y>=dividerY); if(L.length>25) L = L.filter(()=>Math.random()>0.3); if(RT.length>12) RT = RT.filter(()=>Math.random()>0.3); if(RB.length>12) RB = RB.filter(()=>Math.random()>0.3); population = [...L, ...RT, ...RB]; }
+                else { if(L.length>25) L = L.filter(()=>Math.random()>0.3); if(R.length>12) R = R.filter(()=>Math.random()>0.3); population = [...L, ...R]; }
+            } else { population = nextGen; }
+            let cap = 100+(Math.floor(Math.random()*21)-10);
+            if(population.length > cap) {
+                let over = population.length-cap, groups = {}; population.forEach(b=>{ let c=b.color.toLowerCase(); if(!groups[c]) groups[c]=[]; groups[c].push(b); });
+                let surv = []; Object.keys(groups).forEach(c=>{ let l=groups[c], kq=Math.round((l.length/population.length)*over); surv=surv.concat(l.sort(()=>0.5-Math.random()).slice(0, Math.max(0, l.length-kq))); });
+                population = surv.sort(()=>0.5-Math.random()).slice(0, cap);
+                if(selectionActiveTurns === 0 && !isBarrierOpenedTemporarily) { statusAlert.innerText=`⚠️ 환경 저항의 작용으로 ${population.length}마리만 생존하였습니다.`; statusAlert.style.color="#ef4444"; }
+            }
+            document.getElementById('display-population').innerText=`인구수: ${population.length} 마리`;
+        }
+        function applyNaturalSelection() { if(population.length===0 || selectionActiveTurns>0) return; currentSelectionColor=ALL_BIOME_COLORS[Math.floor(Math.random()*ALL_BIOME_COLORS.length)]; mainCanvas.style.backgroundColor=currentSelectionColor; predatorFlashAlpha=0.5; selectionActiveTurns=3; document.getElementById('selection-btn').disabled=true; statusAlert.innerText=`비보호색 종은 포식자에게 먹혀 개체수가 절반으로 줄어듭니다. (남은 시간: 3세대)`; statusAlert.style.color="#ef4444"; }
+        function triggerMutationExplosion() { isMutationExplosionTriggered=true; document.getElementById('mutation-btn').innerText="🧬 대폭발 대기중!"; }
+        function triggerBottleneck() { population = population.sort(()=>0.5-Math.random()).slice(0,5); }
+        function triggerGeneFlow() { const btn = document.getElementById('flow-btn'); btn.disabled=true; let rc = ALL_BIOME_COLORS[Math.floor(Math.random()*ALL_BIOME_COLORS.length)]; for(let i=0; i<10; i++) population.push({x:Math.random()*(mainCanvas.width-40)+20, y:Math.random()*(mainCanvas.height-40)+20, vx:(Math.random()-0.5)*4, vy:(Math.random()-0.5)*4, color:rc, isMutant:true, age:0}); if(isVerticalDivided) { isBarrierOpenedTemporarily=true; statusAlert.innerText="🌊 장벽 개방! 유전자가 뒤섞입니다."; setTimeout(()=>{isBarrierOpenedTemporarily=false; btn.disabled=false; statusAlert.innerText="🚧 장벽 폐쇄.";}, 3000); } else { statusAlert.innerText="🌊 외부 무리 유입."; setTimeout(()=>btn.disabled=false, 2000); } }
+        function triggerFounderEffect() { if(barrierCount>=2) return; barrierCount++; const btn=document.getElementById('founder-btn'); if(barrierCount===1){ isVerticalDivided=true; btn.innerText="⛰️ 장벽 발생 (1/2)"; let f = population.slice(0,3).map(b=>({...b, x:dividerX+30, age:0})); population = [...population.slice(3), ...f]; } else { isHorizontalRightDivided=true; btn.innerText="⛰️ 장벽 발생 (0/2)"; btn.disabled=true; population = population.map((b,i)=>{ if(b.x>=dividerX && i%2===0) return {...b, y:dividerY+40, age:0}; return b; }); } }
+        function toggleSpeed() { const btn=document.getElementById('speed-btn'); if(genIntervalTime===3000){ genIntervalTime=5000; btn.innerText="⏳ 간격: 5초"; } else if(genIntervalTime===5000){ genIntervalTime=7000; btn.innerText="⏳ 간격: 7초"; } else { genIntervalTime=3000; btn.innerText="⏳ 간격: 3초"; } startGenerationTick(); }
+    </script>
+</body>
+</html>
