@@ -187,20 +187,19 @@
 
         function initCanvas() { const canvas = document.getElementById('simCanvas'); if(!canvas) return null; return { canvas, ctx: canvas.getContext('2d') }; }
 
-        // 돌연변이 시뮬레이션: 2차 분열 세로 방향
         function runMutationSim() {
             const cvs = initCanvas(); if(!cvs) return; const { canvas, ctx } = cvs;
             let timer = 0; let pool = [{ x: 285, y: 110, tx: 285, ty: 110, c: '#3b82f6', mut: false }];
             function splitPool(currentPool, mode) {
                 let next = [];
                 currentPool.forEach((p, i) => {
-                    if(mode === 'h') { // 1차 가로 분열
+                    if(mode === 'h') { 
                         next.push({ x: p.x, y: p.y, tx: p.tx - 40, ty: p.ty, c: p.c, mut: false });
                         next.push({ x: p.x, y: p.y, tx: p.tx + 40, ty: p.ty, c: p.c, mut: false });
-                    } else if(mode === 'v') { // 2차 세로 분열
+                    } else if(mode === 'v') { 
                         next.push({ x: p.x, y: p.y, tx: p.tx, ty: p.ty - 40, c: p.c, mut: false });
                         next.push({ x: p.x, y: p.y, tx: p.tx, ty: p.ty + 40, c: p.c, mut: false });
-                    } else { // 3차 혼합 및 변이
+                    } else { 
                         let off = (i % 2 === 0) ? -25 : 25;
                         let isMut = (i === 0);
                         next.push({ x: p.x, y: p.y, tx: p.tx + off, ty: p.ty + 15, c: isMut ? '#ef4444' : p.c, mut: isMut });
@@ -248,7 +247,6 @@
             animate();
         }
 
-        // 창시자 효과 시뮬레이션
         function runFounderEffectSim() {
             if(animId) cancelAnimationFrame(animId); document.getElementById('drift-sim-box').classList.remove('hidden');
             const cvs = initCanvas(); if(!cvs) return; const { canvas, ctx } = cvs;
@@ -267,7 +265,6 @@
             animate();
         }
 
-        // 병목 효과 시뮬레이션
         function runBottleneckEffectSim() {
             if(animId) cancelAnimationFrame(animId); document.getElementById('drift-sim-box').classList.remove('hidden');
             const cvs = initCanvas(); if(!cvs) return; const { canvas, ctx } = cvs;
@@ -290,7 +287,6 @@
             animate();
         }
 
-        // 유전자 흐름 2개 이동
         function runGeneFlowSim() {
             const cvs = initCanvas(); if(!cvs) return; const { canvas, ctx } = cvs;
             let timer = 0; let lP = [], rP = [];
@@ -315,20 +311,21 @@
 
         function startSimulation() { if(animId) cancelAnimationFrame(animId); document.getElementById('main-card').classList.add('hidden'); document.getElementById('lab-screen').style.display = 'block'; document.getElementById('display-world-name').innerText = `🌍 ${userName}의 생태계`; startLab(); }
 
-        // 메인 랩 엔진
         const ORIGINAL_COLOR = '#3b82f6'; const MUTANT_COLORS = ['#10b981', '#ef4444', '#f59e0b', '#a855f7'];
         const ALL_BIOME_COLORS = [ORIGINAL_COLOR, '#10b981', '#ef4444', '#f59e0b', '#a855f7'];
-        // 초기 세대를 1로 변경
-        let population = [], generation = 1, mutationRate = 0.01, isLabRunning = false, genIntervalTime = 3000, genIntervalId = null, pulseTime = 0, isMutationExplosionTriggered = false, barrierCount = 0, isVerticalDivided = false, isHorizontalRightDivided = false, isBarrierOpenedTemporarily = false, currentCanvasBg = '#475569', predatorFlashAlpha = 0, selectionActiveTurns = 0, currentSelectionColor = '';
+        
+        let population = [], generation = 1, mutationRate = 0.01, isLabRunning = false, genIntervalTime = 3000, genIntervalId = null, pulseTime = 0, isMutationExplosionTriggered = false, barrierCount = 0, isVerticalDivided = false, isHorizontalRightDivided = false, isBarrierOpenedTemporarily = false, currentCanvasBg = '#475569', predatorFlashAlpha = 0, bottleneckFlashAlpha = 0, selectionActiveTurns = 0, currentSelectionColor = '';
         const mainCanvas = document.getElementById('evolutionCanvas'), mainCtx = mainCanvas.getContext('2d'), statusAlert = document.getElementById('status-alert');
         const dividerX = 325, dividerY = 225;
 
-        function startLab() { population = [{ x: mainCanvas.width/2-50, y: mainCanvas.height/2, vx: 2, vy: 0, color: ORIGINAL_COLOR, isMutant: false, age: 0 }]; isLabRunning = true; mainLoop(); startGenerationTick(); }
+        function startLab() { population = [{ x: mainCanvas.width/2-50, y: mainCanvas.height/2, vx: 2, vy: 0, color: ORIGINAL_COLOR, mutantUntil: 0, age: 0 }]; isLabRunning = true; mainLoop(); startGenerationTick(); }
         function startGenerationTick() { if(genIntervalId) clearInterval(genIntervalId); genIntervalId = setInterval(nextGeneration, genIntervalTime); }
         function mainLoop() {
             if(!isLabRunning) return; mainCtx.clearRect(0,0, mainCanvas.width, mainCanvas.height); pulseTime+=0.1;
             if(isVerticalDivided && !isBarrierOpenedTemporarily) { mainCtx.strokeStyle="#000"; mainCtx.lineWidth=12; mainCtx.beginPath(); mainCtx.moveTo(dividerX,0); mainCtx.lineTo(dividerX, mainCanvas.height); mainCtx.stroke(); }
             if(isHorizontalRightDivided && !isBarrierOpenedTemporarily) { mainCtx.strokeStyle="#000"; mainCtx.lineWidth=12; mainCtx.beginPath(); mainCtx.moveTo(dividerX, dividerY); mainCtx.lineTo(mainCanvas.width, dividerY); mainCtx.stroke(); }
+            
+            let now = Date.now();
             population.forEach(b => {
                 b.x+=b.vx; b.y+=b.vy; if(b.y<10 || b.y>mainCanvas.height-10) b.vy*=-1;
                 if(isVerticalDivided && !isBarrierOpenedTemporarily) {
@@ -338,20 +335,25 @@
                     }
                 } else { if(b.x<10 || b.x>mainCanvas.width-10) b.vx*=-1; }
                 mainCtx.beginPath(); mainCtx.arc(b.x, b.y, 9, 0, Math.PI*2); mainCtx.fillStyle=b.color; mainCtx.fill();
-                if(b.isMutant) { mainCtx.strokeStyle=`rgba(255,255,255,${0.4+Math.sin(pulseTime*2)*0.4})`; mainCtx.stroke(); }
+                if(b.mutantUntil && now < b.mutantUntil) { mainCtx.strokeStyle=`rgba(255,255,255,${0.4+Math.sin(pulseTime*2)*0.4})`; mainCtx.stroke(); }
             });
+
             if (predatorFlashAlpha > 0) { mainCtx.fillStyle=`rgba(239, 68, 68, ${predatorFlashAlpha})`; mainCtx.fillRect(0,0, mainCanvas.width, mainCanvas.height); predatorFlashAlpha-=0.04; }
+            if (bottleneckFlashAlpha > 0) { mainCtx.fillStyle=`rgba(255, 69, 0, ${bottleneckFlashAlpha})`; mainCtx.fillRect(0,0, mainCanvas.width, mainCanvas.height); bottleneckFlashAlpha-=0.02; }
             requestAnimationFrame(mainLoop);
         }
+
         function nextGeneration() {
             generation++; document.getElementById('display-generation').innerText = `${generation} 세대`;
+            let explosionActive = isMutationExplosionTriggered;
+            if (explosionActive) { isMutationExplosionTriggered = false; document.getElementById('mutation-btn').innerText = "🧬 돌연변이 대폭발"; }
             if (selectionActiveTurns > 0) { selectionActiveTurns--; let match = population.filter(b => b.color.toLowerCase() === currentSelectionColor.toLowerCase()), nonMatch = population.filter(b => b.color.toLowerCase() !== currentSelectionColor.toLowerCase()); if(nonMatch.length > 0) nonMatch = nonMatch.sort(() => 0.5-Math.random()).slice(0, Math.floor(nonMatch.length/2)); population = [...match, ...nonMatch];
                 if (selectionActiveTurns === 0) { mainCanvas.style.backgroundColor='#475569'; document.getElementById('selection-btn').disabled=false; document.getElementById('selection-btn').innerText="💥 자연선택 압박"; statusAlert.innerText="🍃 환경이 안정되었습니다."; statusAlert.style.color="#10b981"; }
                 else { statusAlert.innerText=`비보호색 종은 포식자에게 먹혀 개체수가 절반으로 줄어듭니다. (남은 시간: ${selectionActiveTurns}세대)`; statusAlert.style.color="#ef4444"; }
             }
-            let nextGen = []; population.forEach(p => { p.age++; if(p.age>5) return; let isMut = Math.random() < (isMutationExplosionTriggered ? 0.5 : mutationRate), c = isMut ? MUTANT_COLORS[Math.floor(Math.random()*MUTANT_COLORS.length)] : p.color;
+            let nextGen = []; population.forEach(p => { p.age++; if(p.age>5) return; let isMut = Math.random() < (explosionActive ? 0.5 : mutationRate), c = isMut ? MUTANT_COLORS[Math.floor(Math.random()*MUTANT_COLORS.length)] : p.color;
                 let ang = Math.atan2(p.vy, p.vx), spd = Math.sqrt(p.vx*p.vx+p.vy*p.vy)||2, off = 15*Math.PI/180;
-                nextGen.push({x:p.x, y:p.y, vx:Math.cos(ang-off)*spd, vy:Math.sin(ang-off)*spd, color:p.color, isMutant:false, age:p.age}, {x:p.x, y:p.y, vx:Math.cos(ang+off)*spd, vy:Math.sin(ang+off)*spd, color:c, isMutant:isMut, age:0});
+                nextGen.push({x:p.x, y:p.y, vx:Math.cos(ang-off)*spd, vy:Math.sin(ang-off)*spd, color:p.color, mutantUntil: p.mutantUntil || 0, age:p.age}, {x:p.x, y:p.y, vx:Math.cos(ang+off)*spd, vy:Math.sin(ang+off)*spd, color:c, mutantUntil: isMut ? Date.now() + 3000 : 0, age:0});
             });
             if(isVerticalDivided && !isBarrierOpenedTemporarily) {
                 let L = nextGen.filter(b=>b.x<dividerX), R = nextGen.filter(b=>b.x>=dividerX);
@@ -369,8 +371,8 @@
         }
         function applyNaturalSelection() { if(population.length===0 || selectionActiveTurns>0) return; currentSelectionColor=ALL_BIOME_COLORS[Math.floor(Math.random()*ALL_BIOME_COLORS.length)]; mainCanvas.style.backgroundColor=currentSelectionColor; predatorFlashAlpha=0.5; selectionActiveTurns=3; document.getElementById('selection-btn').disabled=true; statusAlert.innerText=`비보호색 종은 포식자에게 먹혀 개체수가 절반으로 줄어듭니다. (남은 시간: 3세대)`; statusAlert.style.color="#ef4444"; }
         function triggerMutationExplosion() { isMutationExplosionTriggered=true; document.getElementById('mutation-btn').innerText="🧬 대폭발 대기중!"; }
-        function triggerBottleneck() { population = population.sort(()=>0.5-Math.random()).slice(0,5); }
-        function triggerGeneFlow() { const btn = document.getElementById('flow-btn'); btn.disabled=true; let rc = ALL_BIOME_COLORS[Math.floor(Math.random()*ALL_BIOME_COLORS.length)]; for(let i=0; i<10; i++) population.push({x:Math.random()*(mainCanvas.width-40)+20, y:Math.random()*(mainCanvas.height-40)+20, vx:(Math.random()-0.5)*4, vy:(Math.random()-0.5)*4, color:rc, isMutant:true, age:0}); if(isVerticalDivided) { isBarrierOpenedTemporarily=true; statusAlert.innerText="🌊 장벽 개방! 유전자가 뒤섞입니다."; setTimeout(()=>{isBarrierOpenedTemporarily=false; btn.disabled=false; statusAlert.innerText="🚧 장벽 폐쇄.";}, 3000); } else { statusAlert.innerText="🌊 외부 무리 유입."; setTimeout(()=>btn.disabled=false, 2000); } }
+        function triggerBottleneck() { bottleneckFlashAlpha=0.8; population = population.sort(()=>0.5-Math.random()).slice(0,5); statusAlert.innerText="🌋 대재앙 발생! 집단의 개체수가 급격히 감소했습니다."; statusAlert.style.color="#f97316"; }
+        function triggerGeneFlow() { const btn = document.getElementById('flow-btn'); btn.disabled=true; let rc = ALL_BIOME_COLORS[Math.floor(Math.random()*ALL_BIOME_COLORS.length)]; for(let i=0; i<10; i++) population.push({x:Math.random()*(mainCanvas.width-40)+20, y:Math.random()*(mainCanvas.height-40)+20, vx:(Math.random()-0.5)*4, vy:(Math.random()-0.5)*4, color:rc, mutantUntil: Date.now()+3000, age:0}); if(isVerticalDivided) { isBarrierOpenedTemporarily=true; statusAlert.innerText="🌊 장벽 개방! 유전자가 뒤섞입니다."; setTimeout(()=>{isBarrierOpenedTemporarily=false; btn.disabled=false; statusAlert.innerText="🚧 장벽 폐쇄.";}, 3000); } else { statusAlert.innerText="🌊 외부 무리 유입."; setTimeout(()=>btn.disabled=false, 2000); } }
         function triggerFounderEffect() { if(barrierCount>=2) return; barrierCount++; const btn=document.getElementById('founder-btn'); if(barrierCount===1){ isVerticalDivided=true; btn.innerText="⛰️ 장벽 발생 (1/2)"; let f = population.slice(0,3).map(b=>({...b, x:dividerX+30, age:0})); population = [...population.slice(3), ...f]; } else { isHorizontalRightDivided=true; btn.innerText="⛰️ 장벽 발생 (0/2)"; btn.disabled=true; population = population.map((b,i)=>{ if(b.x>=dividerX && i%2===0) return {...b, y:dividerY+40, age:0}; return b; }); } }
         function toggleSpeed() { const btn=document.getElementById('speed-btn'); if(genIntervalTime===3000){ genIntervalTime=5000; btn.innerText="⏳ 간격: 5초"; } else if(genIntervalTime===5000){ genIntervalTime=7000; btn.innerText="⏳ 간격: 7초"; } else { genIntervalTime=3000; btn.innerText="⏳ 간격: 3초"; } startGenerationTick(); }
     </script>
