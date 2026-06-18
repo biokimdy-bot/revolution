@@ -91,12 +91,16 @@
                 <div class="desc-box">
                     <b>💡 진화 요인 가이드</b>
                     <ul>
-                        <li><span style="color:#ef4444; font-weight:bold;">자연선택:</span> 비보호색 종족의 절반을 도태시킵니다.</li>
+                        <li><span style="color:#ef4444; font-weight:bold;">자연선택:</span> 비보호색을 가진 개체의 절반을 도태 시킵니다.</li>
                         <li><span style="color:#a855f7; font-weight:bold;">돌연변이:</span> 변이 태어날 확률이 50%로 증가합니다.</li>
                         <li><span style="color:#f97316; font-weight:bold;">대재앙:</span> 단 5마리만 남기고 전멸시킵니다.</li>
                         <li><span style="color:#06b6d4; font-weight:bold;">지리적 장벽:</span> 격리 진화를 유도합니다.</li>
                         <li><span style="color:#22c55e; font-weight:bold;">유전자 흐름:</span> 유전자가 섞입니다.</li>
                     </ul>
+                </div>
+                <div style="margin-top: 15px; display: flex; gap: 8px;">
+                    <button class="btn-back" style="flex: 1; padding: 10px; font-size: 0.9rem;" onclick="backToTutorialFromLab()">뒤로가기</button>
+                    <button class="btn-back" style="flex: 1.2; padding: 10px; font-size: 0.9rem; background-color: #334155;" onclick="location.reload()">처음으로 가기</button>
                 </div>
             </div>
         </div>
@@ -299,17 +303,28 @@
                 ctx.strokeStyle = '#475569'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(285, 0); ctx.lineTo(285, canvas.height); ctx.stroke();
                 lP.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 7, 0, Math.PI*2); ctx.fillStyle=p.c; ctx.fill(); });
                 rP.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 7, 0, Math.PI*2); ctx.fillStyle=p.c; ctx.fill(); });
-                ctx.fillStyle = "#ffffff"; ctx.font = "bold 13px sans-serif"; ctx.fillText("집단 A", 30, 25); ctx.fillText("집단 B", 410, 25);
+                ctx.fillStyle = "#ffffff"; ctx.font = "bold 13px sans-serif";
+                ctx.fillText("집단 A", 30, 25); ctx.fillText("집단 B", 410, 25);
                 if(timer === 65) migs.forEach(m => m.mv = true);
                 if(migs[0].mv) migs.forEach((m, idx) => { m.x += (420 - m.x) * 0.04; m.y += (100 + idx*40 - m.y) * 0.04; });
                 if(timer > 120) { ctx.fillStyle = '#3b82f6'; ctx.fillText("🌊 파란색 유전자 유입!", 250, 205); }
-                if(timer > 280) { timer = 0; migs[0].x = 130; migs[0].y = 80; migs[1].x = 170; migs[1].y = 130; migs.forEach(m => m.mv = false); }
+                if(timer > 170) { ctx.fillStyle = '#10b981'; ctx.fillText("개체군의 유전적 구성이 변함!", 250, 230); }
+                if(timer > 320) { timer = 0; migs[0].x = 130; migs[0].y = 80; migs[1].x = 170; migs[1].y = 130; migs.forEach(m => m.mv = false); }
                 animId = requestAnimationFrame(animate);
             }
             animate();
         }
 
         function startSimulation() { if(animId) cancelAnimationFrame(animId); document.getElementById('main-card').classList.add('hidden'); document.getElementById('lab-screen').style.display = 'block'; document.getElementById('display-world-name').innerText = `🌍 ${userName}의 생태계`; startLab(); }
+
+        // 시뮬레이션 화면에서 뒤로가기 처리
+        function backToTutorialFromLab() {
+            isLabRunning = false;
+            if(genIntervalId) clearInterval(genIntervalId);
+            document.getElementById('lab-screen').style.display = 'none';
+            document.getElementById('main-card').classList.remove('hidden');
+            showFactorSelection();
+        }
 
         const ORIGINAL_COLOR = '#3b82f6'; const MUTANT_COLORS = ['#10b981', '#ef4444', '#f59e0b', '#a855f7'];
         const ALL_BIOME_COLORS = [ORIGINAL_COLOR, '#10b981', '#ef4444', '#f59e0b', '#a855f7'];
@@ -334,6 +349,7 @@
                         if(isHorizontalRightDivided) { if(b.y-b.vy < dividerY) { if(b.y > dividerY-16) { b.y = dividerY-16; b.vy *= -1; } } else { if(b.y < dividerY+16) { b.y = dividerY+16; b.vy *= -1; } } }
                     }
                 } else { if(b.x<10 || b.x>mainCanvas.width-10) b.vx*=-1; }
+                
                 mainCtx.beginPath(); mainCtx.arc(b.x, b.y, 9, 0, Math.PI*2); mainCtx.fillStyle=b.color; mainCtx.fill();
                 if(b.mutantUntil && now < b.mutantUntil) { mainCtx.strokeStyle=`rgba(255,255,255,${0.4+Math.sin(pulseTime*2)*0.4})`; mainCtx.stroke(); }
             });
@@ -349,17 +365,34 @@
             if (explosionActive) { isMutationExplosionTriggered = false; document.getElementById('mutation-btn').innerText = "🧬 돌연변이 대폭발"; }
             if (selectionActiveTurns > 0) { selectionActiveTurns--; let match = population.filter(b => b.color.toLowerCase() === currentSelectionColor.toLowerCase()), nonMatch = population.filter(b => b.color.toLowerCase() !== currentSelectionColor.toLowerCase()); if(nonMatch.length > 0) nonMatch = nonMatch.sort(() => 0.5-Math.random()).slice(0, Math.floor(nonMatch.length/2)); population = [...match, ...nonMatch];
                 if (selectionActiveTurns === 0) { mainCanvas.style.backgroundColor='#475569'; document.getElementById('selection-btn').disabled=false; document.getElementById('selection-btn').innerText="💥 자연선택 압박"; statusAlert.innerText="🍃 환경이 안정되었습니다."; statusAlert.style.color="#10b981"; }
-                else { statusAlert.innerText=`비보호색 종은 포식자에게 먹혀 개체수가 절반으로 줄어듭니다. (남은 시간: ${selectionActiveTurns}세대)`; statusAlert.style.color="#ef4444"; }
+                else { statusAlert.innerText=`비보호색을 가진 개체의 절반을 도태 시킵니다. (남은 시간: ${selectionActiveTurns}세대)`; statusAlert.style.color="#ef4444"; }
             }
-            let nextGen = []; population.forEach(p => { p.age++; if(p.age>5) return; let isMut = Math.random() < (explosionActive ? 0.5 : mutationRate), c = isMut ? MUTANT_COLORS[Math.floor(Math.random()*MUTANT_COLORS.length)] : p.color;
+            
+            let nextGen = []; 
+            population.forEach(p => { 
+                p.age++; if(p.age>5) return; 
                 let ang = Math.atan2(p.vy, p.vx), spd = Math.sqrt(p.vx*p.vx+p.vy*p.vy)||2, off = 15*Math.PI/180;
-                nextGen.push({x:p.x, y:p.y, vx:Math.cos(ang-off)*spd, vy:Math.sin(ang-off)*spd, color:p.color, mutantUntil: p.mutantUntil || 0, age:p.age}, {x:p.x, y:p.y, vx:Math.cos(ang+off)*spd, vy:Math.sin(ang+off)*spd, color:c, mutantUntil: isMut ? Date.now() + 3000 : 0, age:0});
+                
+                // 자손 1 (각각 독립적으로 변이 확률 적용하여 모든 색이 공평하게 증식)
+                let isMut1 = Math.random() < (explosionActive ? 0.5 : mutationRate);
+                let c1 = isMut1 ? MUTANT_COLORS[Math.floor(Math.random()*MUTANT_COLORS.length)] : p.color;
+                
+                // 자손 2
+                let isMut2 = Math.random() < (explosionActive ? 0.5 : mutationRate);
+                let c2 = isMut2 ? MUTANT_COLORS[Math.floor(Math.random()*MUTANT_COLORS.length)] : p.color;
+
+                nextGen.push(
+                    {x:p.x, y:p.y, vx:Math.cos(ang-off)*spd, vy:Math.sin(ang-off)*spd, color:c1, mutantUntil: isMut1 ? Date.now()+3000 : (p.mutantUntil || 0), age:p.age}, 
+                    {x:p.x, y:p.y, vx:Math.cos(ang+off)*spd, vy:Math.sin(ang+off)*spd, color:c2, mutantUntil: isMut2 ? Date.now()+3000 : 0, age:0}
+                );
             });
+
             if(isVerticalDivided && !isBarrierOpenedTemporarily) {
                 let L = nextGen.filter(b=>b.x<dividerX), R = nextGen.filter(b=>b.x>=dividerX);
                 if(isHorizontalRightDivided) { let RT = R.filter(b=>b.y<dividerY), RB = R.filter(b=>b.y>=dividerY); if(L.length>25) L = L.filter(()=>Math.random()>0.3); if(RT.length>12) RT = RT.filter(()=>Math.random()>0.3); if(RB.length>12) RB = RB.filter(()=>Math.random()>0.3); population = [...L, ...RT, ...RB]; }
                 else { if(L.length>25) L = L.filter(()=>Math.random()>0.3); if(R.length>12) R = R.filter(()=>Math.random()>0.3); population = [...L, ...R]; }
             } else { population = nextGen; }
+            
             let cap = 100+(Math.floor(Math.random()*21)-10);
             if(population.length > cap) {
                 let over = population.length-cap, groups = {}; population.forEach(b=>{ let c=b.color.toLowerCase(); if(!groups[c]) groups[c]=[]; groups[c].push(b); });
@@ -369,7 +402,7 @@
             }
             document.getElementById('display-population').innerText=`인구수: ${population.length} 마리`;
         }
-        function applyNaturalSelection() { if(population.length===0 || selectionActiveTurns>0) return; currentSelectionColor=ALL_BIOME_COLORS[Math.floor(Math.random()*ALL_BIOME_COLORS.length)]; mainCanvas.style.backgroundColor=currentSelectionColor; predatorFlashAlpha=0.5; selectionActiveTurns=3; document.getElementById('selection-btn').disabled=true; statusAlert.innerText=`비보호색 종은 포식자에게 먹혀 개체수가 절반으로 줄어듭니다. (남은 시간: 3세대)`; statusAlert.style.color="#ef4444"; }
+        function applyNaturalSelection() { if(population.length===0 || selectionActiveTurns>0) return; currentSelectionColor=ALL_BIOME_COLORS[Math.floor(Math.random()*ALL_BIOME_COLORS.length)]; mainCanvas.style.backgroundColor=currentSelectionColor; predatorFlashAlpha=0.5; selectionActiveTurns=3; document.getElementById('selection-btn').disabled=true; statusAlert.innerText=`비보호색을 가진 개체의 절반을 도태 시킵니다. (남은 시간: 3세대)`; statusAlert.style.color="#ef4444"; }
         function triggerMutationExplosion() { isMutationExplosionTriggered=true; document.getElementById('mutation-btn').innerText="🧬 대폭발 대기중!"; }
         function triggerBottleneck() { bottleneckFlashAlpha=0.8; population = population.sort(()=>0.5-Math.random()).slice(0,5); statusAlert.innerText="🌋 대재앙 발생! 집단의 개체수가 급격히 감소했습니다."; statusAlert.style.color="#f97316"; }
         function triggerGeneFlow() { const btn = document.getElementById('flow-btn'); btn.disabled=true; let rc = ALL_BIOME_COLORS[Math.floor(Math.random()*ALL_BIOME_COLORS.length)]; for(let i=0; i<10; i++) population.push({x:Math.random()*(mainCanvas.width-40)+20, y:Math.random()*(mainCanvas.height-40)+20, vx:(Math.random()-0.5)*4, vy:(Math.random()-0.5)*4, color:rc, mutantUntil: Date.now()+3000, age:0}); if(isVerticalDivided) { isBarrierOpenedTemporarily=true; statusAlert.innerText="🌊 장벽 개방! 유전자가 뒤섞입니다."; setTimeout(()=>{isBarrierOpenedTemporarily=false; btn.disabled=false; statusAlert.innerText="🚧 장벽 폐쇄.";}, 3000); } else { statusAlert.innerText="🌊 외부 무리 유입."; setTimeout(()=>btn.disabled=false, 2000); } }
